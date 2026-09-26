@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Ad Meliora</title>
+<meta name="theme-color" content="#050e0d" />
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" href="icon-192.png" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Iceberg&family=Iceland&family=Nova+Mono&family=Turret+Road:wght@300;400;600;800&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg-void: #050e0d;
+    --bg-panel: #0a1f1d;
+    --bg-panel-raised: #0d2826;
+    --teal-core: #1fffc9;
+    --teal-dim: #0d6b5e;
+    --teal-glow: rgba(31,255,201,0.35);
+    --text-primary: #d8fff5;
+    --text-muted: #5f9c92;
+    --font-display: 'Nova Mono', monospace;
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  body {
+    background: var(--bg-void);
+    color: var(--text-primary);
+    font-family: var(--font-display);
+    overflow: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ---- rotate overlay ---- */
+  .rotate-overlay {
+    display: none;
+    position: fixed; inset: 0; z-index: 999;
+    background: var(--bg-void);
+    color: var(--teal-core);
+    align-items: center; justify-content: center;
+    flex-direction: column; gap: 12px;
+    text-align: center; padding: 24px;
+    font-family: var(--font-display);
+  }
+  .rotate-overlay .glyph { font-size: 2.5rem; }
+  @media (orientation: portrait) {
+    .rotate-overlay { display: flex; }
+    .app { display: none; }
+  }
+
+  /* ---- app shell ---- */
+  .app {
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 14px;
+    gap: 8px;
+  }
+
+  /* ---- HUD bar ---- */
+  .hud {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--teal-dim);
+    flex-shrink: 0;
+  }
+  .realm-id { display: flex; flex-direction: column; line-height: 1.1; }
+  .realm-id .label { font-size: 0.62rem; letter-spacing: 0.08em; color: var(--text-muted); }
+  .realm-id .name { font-size: 1.1rem; color: var(--teal-core); text-shadow: 0 0 8px var(--teal-glow); }
+  .rank-badge {
+    border: 1px solid var(--teal-core);
+    color: var(--teal-core);
+    font-size: 0.75rem;
+    padding: 3px 9px;
+    border-radius: 3px;
+    box-shadow: 0 0 6px var(--teal-glow) inset;
+    flex-shrink: 0;
+  }
+  .xp-block { flex: 1; min-width: 0; }
+  .xp-row { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--text-muted); margin-bottom: 3px; }
+  .xp-row span.val { color: var(--teal-core); }
+  .xp-track { height: 7px; background: var(--bg-panel-raised); border-radius: 4px; overflow: hidden; border: 1px solid var(--teal-dim); }
+  .xp-fill { height: 100%; background: linear-gradient(90deg, var(--teal-dim), var(--teal-core)); width: 0%; transition: width 0.4s ease; }
+
+  .font-switch { display: flex; gap: 4px; flex-shrink: 0; }
+  .font-switch button {
+    font-family: inherit;
+    background: var(--bg-panel-raised);
+    color: var(--text-muted);
+    border: 1px solid var(--teal-dim);
+    font-size: 0.6rem;
+    padding: 5px 7px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .font-switch button.active {
+    color: var(--bg-void);
+    background: var(--teal-core);
+    border-color: var(--teal-core);
+  }
+
+  /* ---- grid ---- */
+  .sheet-wrap { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--teal-dim); border-radius: 4px; }
+  .sheet {
+    display: grid;
+    grid-template-columns: 132px repeat(var(--day-count), 38px);
+  }
+  .corner, .day-head, .quest-label {
+    background: var(--bg-panel);
+    position: sticky;
+  }
+  .corner { top: 0; left: 0; z-index: 3; border-bottom: 1px solid var(--teal-dim); border-right: 1px solid var(--teal-dim); }
+  .day-head {
+    top: 0; z-index: 2;
+    text-align: center;
+    font-size: 0.62rem;
+    color: var(--text-muted);
+    padding: 6px 0;
+    border-bottom: 1px solid var(--teal-dim);
+  }
+  .day-head.today { color: var(--teal-core); }
+  .quest-label {
+    left: 0; z-index: 2;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 6px 10px;
+    border-right: 1px solid var(--teal-dim);
+    border-bottom: 1px solid rgba(31,255,201,0.08);
+  }
+  .quest-label .qname { font-size: 0.72rem; color: var(--text-primary); }
+  .quest-label .qmeta { font-size: 0.6rem; color: var(--teal-dim); margin-top: 2px; }
+  .cell {
+    border-bottom: 1px solid rgba(31,255,201,0.08);
+    border-right: 1px solid rgba(31,255,201,0.06);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: transparent;
+    font-size: 0.85rem;
+    user-select: none;
+  }
+  .cell.done {
+    background: var(--teal-dim);
+    box-shadow: inset 0 0 10px var(--teal-glow);
+    color: var(--teal-core);
+  }
+
+  /* ---- realm tabs ---- */
+  .realm-tabs { display: flex; gap: 6px; flex-shrink: 0; }
+  .realm-tabs button {
+    font-family: inherit;
+    flex: 1;
+    background: var(--bg-panel);
+    color: var(--teal-core);
+    border: 1px solid var(--teal-core);
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    padding: 7px 0;
+    border-radius: 3px;
+  }
+  .realm-tabs button.locked {
+    color: var(--text-muted);
+    border-color: var(--teal-dim);
+    opacity: 0.55;
+  }
+</style>
+</head>
+<body>
+
+<div class="rotate-overlay">
+  <div class="glyph">&#8635;</div>
+  <div>ROTATE DEVICE<br/>THIS REALM ONLY RENDERS IN LANDSCAPE</div>
+</div>
+
+<div class="app">
+
+  <div class="hud">
+    <div class="realm-id">
+      <span class="label">REALM</span>
+      <span class="name">VITALITY</span>
+    </div>
+    <div class="rank-badge" id="rankBadge">RANK C</div>
+    <div class="xp-block">
+      <div class="xp-row">
+        <span>MONTHLY XP</span>
+        <span class="val"><span id="xpEarned">0</span> / <span id="xpTarget">0</span></span>
+      </div>
+      <div class="xp-track"><div class="xp-fill" id="xpFill"></div></div>
+    </div>
+    <div class="font-switch" id="fontSwitch">
+      <button data-font="'Nova Mono', monospace">NOVA</button>
+      <button data-font="'Turret Road', sans-serif">TURRET</button>
+      <button data-font="'Iceland', sans-serif">ICELAND</button>
+      <button data-font="'Iceberg', sans-serif">ICEBERG</button>
+    </div>
+  </div>
+
+  <div class="sheet-wrap">
+    <div class="sheet" id="sheet"></div>
+  </div>
+
+  <div class="realm-tabs">
+    <button>VITALITY</button>
+    <button class="locked">MIND</button>
+    <button class="locked">WEALTH</button>
+    <button class="locked">SOCIAL</button>
+  </div>
+
+</div>
+
+<script>
+  // ---- placeholder quest data (Stage 2 replaces this) ----
+  const quests = [
+    { id: 'q1', name: 'Hydration Ritual', xp: 40, target: 1200 },
+    { id: 'q2', name: 'Morning Circuit',  xp: 80, target: 2400 },
+    { id: 'q3', name: 'Iron Trial',       xp: 120, target: 1800 },
+    { id: 'q4', name: 'Sleep Sanctum',    xp: 60, target: 1800 },
+    { id: 'q5', name: 'Clean Fuel',       xp: 90, target: 2700 },
+  ];
+
+  const now = new Date();
+  const dayCount = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const today = now.getDate();
+  document.documentElement.style.setProperty('--day-count', dayCount);
+
+  const state = {}; // "questId-day" -> boolean
+
+  const sheet = document.getElementById('sheet');
+
+  function cellKey(qid, day) { return qid + '-' + day; }
+
+  function render() {
+    sheet.innerHTML = '';
+
+    const corner = document.createElement('div');
+    corner.className = 'corner';
+    sheet.appendChild(corner);
+
+    for (let d = 1; d <= dayCount; d++) {
+      const h = document.createElement('div');
+      h.className = 'day-head' + (d === today ? ' today' : '');
+      h.textContent = d;
+      sheet.appendChild(h);
+    }
+
+    quests.forEach(q => {
+      const label = document.createElement('div');
+      label.className = 'quest-label';
+      label.innerHTML = '<span class="qname">' + q.name + '</span><span class="qmeta">' + q.xp + ' XP</span>';
+      sheet.appendChild(label);
+
+      for (let d = 1; d <= dayCount; d++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell' + (state[cellKey(q.id, d)] ? ' done' : '');
+        cell.textContent = '\u2713';
+        cell.addEventListener('click', () => {
+          const key = cellKey(q.id, d);
+          state[key] = !state[key];
+          cell.classList.toggle('done', !!state[key]);
+          updateTotals();
+        });
+        sheet.appendChild(cell);
+      }
+    });
+  }
+
+  function updateTotals() {
+    let earned = 0, target = 0;
+    quests.forEach(q => {
+      target += q.target;
+      for (let d = 1; d <= dayCount; d++) {
+        if (state[cellKey(q.id, d)]) earned += q.xp;
+      }
+    });
+    document.getElementById('xpEarned').textContent = earned;
+    document.getElementById('xpTarget').textContent = target;
+    const pct = target ? Math.min(100, (earned / target) * 100) : 0;
+    document.getElementById('xpFill').style.width = pct + '%';
+
+    let rank = 'F';
+    if (pct >= 80) rank = 'A';
+    else if (pct >= 60) rank = 'B';
+    else if (pct >= 40) rank = 'C';
+    else if (pct >= 20) rank = 'D';
+    document.getElementById('rankBadge').textContent = 'RANK ' + rank;
+  }
+
+  render();
+  updateTotals();
+
+  // ---- font switcher ----
+  const fontButtons = document.querySelectorAll('#fontSwitch button');
+  fontButtons.forEach((btn, i) => {
+    btn.addEventListener('click', () => {
+      document.documentElement.style.setProperty('--font-display', btn.dataset.font);
+      fontButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+    if (i === 0) btn.classList.add('active');
+  });
+
+  // ---- service worker ----
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    });
+  }
+</script>
+
+</body>
+</html>
