@@ -24,10 +24,8 @@
     --text-muted: #5f9c92;
     --font-display: 'Nova Mono', monospace;
     box-sizing: border-box;
-    padding-top: env(safe-area-inset-top, 0px);
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-    padding-left: env(safe-area-inset-left, 0px);
-    padding-right: env(safe-area-inset-right, 0px);
+    /* Safe-area padding intentionally removed for now: content runs edge to edge.
+       Notch handling comes back once fullscreen is confirmed working. */
   }
   *, *::before, *::after { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
@@ -62,7 +60,7 @@
     height: 100dvh;
     display: flex;
     flex-direction: column;
-    padding: 10px 14px;
+    padding: 8px 10px 8px 4px;
     gap: 8px;
   }
 
@@ -308,10 +306,28 @@
     if (i === 0) btn.classList.add('active');
   });
 
+  // ---- fullscreen (same API the Vivaldi extension uses) ----
+  // Browsers only allow this from a user tap, so the first tap anywhere triggers it.
+  // If the app is exited/backgrounded, the next tap re-enters fullscreen.
+  function enterFullscreen() {
+    const el = document.documentElement;
+    const alreadyFull = document.fullscreenElement ||
+      window.matchMedia('(display-mode: fullscreen)').matches;
+    if (alreadyFull || !el.requestFullscreen) return;
+    el.requestFullscreen({ navigationUI: 'hide' })
+      .then(() => {
+        if (screen.orientation && screen.orientation.lock) {
+          screen.orientation.lock('landscape').catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }
+  document.addEventListener('click', enterFullscreen);
+
   // ---- service worker ----
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('service-worker.js').catch(() => {});
+      navigator.serviceWorker.register('service-worker.js', { updateViaCache: 'none' }).catch(() => {});
     });
   }
 </script>
